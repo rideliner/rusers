@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require 'rusers'
+require 'yaml'
+
+comps = YAML.load_file RemoteUsers::MACHINES_FILE
+
+if ARGV.delete '--log'
+  comps = comps.select { |x| ARGV.include?(x.room) || ARGV.include?(x.name) } unless ARGV.empty?
+
+  RemoteUsers::Connection.new(comps).getHostsInfo.to_a.each { |info|
+    host, users = info.shift
+    puts host
+
+    unless users.nil?
+      users.each { |(user, count)|
+        str = "  #{user.username}"
+        str += " [x#{count}]" if count > 1
+        puts str
+      }
+    end
+
+    puts
+  }
+else
+  users = ARGV.length > 0 ? ARGV : [ ENV['USER'] ]
+
+  RemoteUsers::Connection.new(comps).findUser(users) { |info|
+    host, (user, count) = info.shift
+
+    str = host.to_s
+    str += " (#{user.username})" if users.length > 1
+    str += " [x#{count}]" if count > 1
+    puts str
+  }
+end
